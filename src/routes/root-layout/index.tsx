@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button.tsx";
+import { Outlet, useNavigate } from "react-router-dom";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/command.tsx";
 import { TOOLS } from "@/tools.ts";
 import { ReactSetState } from "@/types.ts";
+import { RootLayoutHeader } from "@/routes/root-layout/header.tsx";
 
 export function RootLayout() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -18,23 +18,8 @@ export function RootLayout() {
   return (
     <React.Fragment>
       <div className="dark:text-white w-screen h-screen overflow-hidden flex flex-col">
-        <header className="flex justify-between items-center p-1">
-          <div className="flex gap-x-1">
-            <Button asChild>
-              <Link to="/" className="px-3 py-1 rounded">
-                Home
-              </Link>
-            </Button>
-
-            <Button variant="outline" onClick={() => setIsOpen(true)}>
-              Search
-              <kbd className="ml-2 rounded bg-gray-50 text-gray-600 px-2 py-0.5">
-                ⌘K
-              </kbd>
-            </Button>
-          </div>
-        </header>
-        <main className="flex-grow">
+        <RootLayoutHeader setIsOpen={setIsOpen} />
+        <main className="flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>

@@ -1,4 +1,4 @@
-import { Sha2Route } from "@/routes/tools/sha2.route.tsx";
+import { HashingRoute } from "@/routes/tools/hashing.route.tsx";
 import { DiffRoute } from "@/routes/tools/diff.route.tsx";
 import { CsvToJsonRoute } from "@/routes/tools/csv-to-json.route.tsx";
 
@@ -15,16 +15,16 @@ type Tool = {
   description: string;
   tag: Tag[];
   path: string;
-  component: typeof Sha2Route;
+  component: typeof HashingRoute;
 };
 
 export const TOOLS = {
   sha2: {
-    name: "SHA2 Hashing",
+    name: "Cryptographic Hashing",
     description: "SHA256 and SHA512 hashing",
     tag: [TAGS.HASHING],
     path: "sha2",
-    component: Sha2Route,
+    component: HashingRoute,
   },
   diff: {
     name: "Diff",

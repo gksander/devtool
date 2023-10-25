@@ -8,6 +8,7 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             hashing::hash_sha256,
+            hashing::hash_sha384,
             hashing::hash_sha512,
             parse_csv::extract_csv_headers,
             parse_csv::csv_as_json,

@@ -19,6 +19,9 @@
       },
       "dialog": {
         "open": true
+      },
+      "clipboard": {
+        "writeText": true
       }
     },
     "bundle": {
