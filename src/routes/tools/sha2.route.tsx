@@ -1,26 +1,31 @@
 import * as React from "react";
-import { Label } from "@/components/ui/label.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { invoke } from "@tauri-apps/api/tauri";
 import { Button } from "@/components/ui/button.tsx";
+import { PageContainer } from "@/components/ui/page-container.tsx";
+import { LabeledInput } from "@/components/ui/labeled-input.tsx";
 
 export function Sha2Route() {
   const [data, setData] = React.useState("");
   const [output, setOutput] = React.useState("");
 
   return (
-    <div>
+    <PageContainer>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           setOutput(await invoke("hash_sha256", { data }));
         }}
+        className="flex gap-x-2 items-end"
       >
-        <Label>Input</Label>
-        <Input type="text" onChange={(e) => setData(e.currentTarget.value)} />
+        <LabeledInput
+          label="Input"
+          type="text"
+          onChange={(e) => setData(e.currentTarget.value)}
+          containerClassName="flex-1"
+        />
         <Button type="submit">Hash</Button>
       </form>
-      <div>{output}</div>
-    </div>
+      <div className="mt-2">{output}</div>
+    </PageContainer>
   );
 }

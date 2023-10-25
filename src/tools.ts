@@ -1,11 +1,13 @@
 import { Sha2Route } from "@/routes/tools/sha2.route.tsx";
 import { DiffRoute } from "@/routes/tools/diff.route.tsx";
+import { CsvToJsonRoute } from "@/routes/tools/csv-to-json.route.tsx";
 
 type Tag = {
   name: string;
 };
 const TAGS = {
   HASHING: { name: "Hashing" },
+  CSV: { name: "CSV" },
 } satisfies Record<string, Tag>;
 
 type Tool = {
@@ -30,5 +32,12 @@ export const TOOLS = {
     tag: [],
     path: "diff",
     component: DiffRoute,
+  },
+  csv2json: {
+    name: "CSV to JSON",
+    description: "Convert CSV to JSON",
+    tag: [TAGS.CSV],
+    path: "csv2json",
+    component: CsvToJsonRoute,
   },
 } satisfies Record<string, Tool>;

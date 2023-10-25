@@ -1,8 +1,6 @@
 import * as React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,7 +10,6 @@ import {
   CommandList,
 } from "@/components/ui/command.tsx";
 import { TOOLS } from "@/tools.ts";
-import { Search } from "lucide-react";
 import { ReactSetState } from "@/types.ts";
 
 export function RootLayout() {
@@ -20,7 +17,7 @@ export function RootLayout() {
 
   return (
     <React.Fragment>
-      <div className="dark:text-white">
+      <div className="dark:text-white w-screen h-screen overflow-hidden flex flex-col">
         <header className="flex justify-between items-center p-1">
           <div className="flex gap-x-1">
             <Button asChild>
@@ -37,7 +34,7 @@ export function RootLayout() {
             </Button>
           </div>
         </header>
-        <main>
+        <main className="flex-grow">
           <Outlet />
         </main>
       </div>
