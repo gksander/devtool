@@ -1,8 +1,7 @@
 import * as React from "react";
 import * as monaco from "monaco-editor";
 import { invoke } from "@tauri-apps/api/tauri";
-import { Button } from "@/components/ui/button.tsx";
-import { Clipboard, File, FileUp, Play, XSquare } from "lucide-react";
+import { Clipboard, File, FileUp, XSquare } from "lucide-react";
 import { Combobox, ComboBoxOption } from "@/components/ui/combobox.tsx";
 import {
   Card,
@@ -19,6 +18,7 @@ import { create } from "zustand";
 import { open } from "@tauri-apps/api/dialog";
 import { clsx } from "clsx";
 import { FileDrop } from "@/components/file-drop.tsx";
+import { RunButton } from "@/components/run-button.tsx";
 
 const options = [
   {
@@ -113,6 +113,7 @@ export function HashingRoute() {
               mode === "text" && "p-0",
             )}
           >
+            {/* TODO: dedup the file display between CSV */}
             {mode === "file" ? (
               <div className="flex items-center gap-x-3 w-full">
                 <File className="w-6 h-6 text-gray-600" />
@@ -136,11 +137,7 @@ export function HashingRoute() {
               tooltip="Choose local file"
               onClick={chooseLocalFile}
             >
-              {mode === "text" ? (
-                <FileUp className="w-4 h-4" />
-              ) : (
-                <XSquare className="w-4 h-4" />
-              )}
+              <FileUp className="w-4 h-4" />
             </TooltipButton>
             <div className="flex gap-x-3">
               <Combobox
@@ -149,9 +146,7 @@ export function HashingRoute() {
                 onValueChange={setHashType}
                 placeholder="Algorithm..."
               />
-              <Button variant="default" onClick={run}>
-                Run <Play className="w-4 h-4 ml-2" />
-              </Button>
+              <RunButton onClick={run} />
             </div>
           </CardFooter>
         </Card>

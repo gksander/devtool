@@ -1,30 +1,32 @@
-use csv::ReaderBuilder;
+use csv::{ReaderBuilder};
 use std::collections::HashMap;
-
-// Extract CSV header from file
-#[tauri::command]
-pub fn extract_csv_headers(data_path: &str) -> Vec<String> {
-    ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(data_path)
-        .expect("Expected path")
-        .headers()
-        .expect("Expected header")
-        .iter()
-        .map(|x| String::from(x))
-        .collect()
-}
+use std::fs::read;
 
 // Extract fields from CSV file and return as JSON
 #[tauri::command]
-pub fn csv_as_json(data_path: &str, fields: Vec<&str>) -> Vec<HashMap<String, String>> {
+pub fn csv_as_json(
+    data: &str,
+    fields: Vec<&str>,
+    is_file_path: bool,
+) -> (Vec<String>, Vec<HashMap<String, String>>) {
+    let bytes = if is_file_path {
+        read(data).unwrap()
+    } else {
+        data.as_bytes().to_vec()
+    };
+
     let mut rdr = ReaderBuilder::new()
         .has_headers(true)
-        .from_path(data_path)
-        .expect("Expected path");
+        .from_reader(&bytes[..]);
 
-    let mut records = Vec::new();
+    let headers: Vec<String> = rdr
+        .headers()
+        .expect("expected header")
+        .iter()
+        .map(|x| String::from(x))
+        .collect();
 
+    let mut records: Vec<HashMap<String, String>> = Vec::new();
     let has_fields_specified = fields.len() > 0;
 
     for result in rdr.deserialize() {
@@ -51,5 +53,5 @@ pub fn csv_as_json(data_path: &str, fields: Vec<&str>) -> Vec<HashMap<String, St
         }
     }
 
-    records
+    (headers, records)
 }

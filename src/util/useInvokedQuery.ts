@@ -13,9 +13,13 @@ export const useInvokedQuery = <T>(fnName: string) => {
       .then((res) => {
         setData(res as T);
         setStatus("success");
+
+        return res;
       })
-      .catch(() => {
+      .catch((err) => {
         setStatus("error");
+
+        throw err;
       });
   }, []);
 
