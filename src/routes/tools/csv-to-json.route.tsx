@@ -1,13 +1,8 @@
 import * as React from "react";
 import * as monaco from "monaco-editor";
-import { PageContainer } from "@/components/ui/page-container.tsx";
 import { open } from "@tauri-apps/api/dialog";
-import { invoke } from "@tauri-apps/api/tauri";
 import { useInvokedQuery } from "@/util/useInvokedQuery.ts";
-import { Title } from "@/components/ui/title.tsx";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
-import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 import {
   Card,
   CardContent,
@@ -20,20 +15,20 @@ import { RunButton } from "@/components/run-button.tsx";
 import { create } from "zustand";
 import { FileDrop } from "@/components/file-drop.tsx";
 import { TooltipButton } from "@/components/ui/tooltip-button.tsx";
-import { File, FileUp, XSquare } from "lucide-react";
+import { Clipboard, File, FileUp, XSquare } from "lucide-react";
 import { clsx } from "clsx";
+import { useToast } from "@/components/ui/use-toast.ts";
+import { writeText } from "@tauri-apps/api/clipboard";
 
 /**
  * TODO:
- * - Clipboard for copying JSON output
  * - Selecting fields to show
- * - Restricting to CSV
  */
 export function CsvToJsonRoute() {
+  const { toast } = useToast();
   const { execute: csvToJson, data: payload } =
     useInvokedQuery<[string[], Record<string, string>]>("csv_as_json");
   const mode = useStore((state) => state.mode);
-  const [fields, setFields] = React.useState([] as string[]);
   const jsonContainerRef = React.useRef<HTMLDivElement>(null);
   const jsonEditorRef =
     React.useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -148,9 +143,11 @@ export function CsvToJsonRoute() {
           <CardFooter className="p-3 shrink-0 flex justify-between">
             <TooltipButton
               tooltip="Choose local file"
-              // TODO: Enforce CSV
               onClick={async () => {
-                let filepath = await open();
+                let filepath = await open({
+                  multiple: false,
+                  filters: [{ name: "CSV", extensions: ["csv"] }],
+                });
                 if (!filepath) return;
                 filepath = Array.isArray(filepath) ? filepath[0] : filepath;
 
@@ -175,12 +172,24 @@ export function CsvToJsonRoute() {
             <CardTitle>JSON Output</CardTitle>
             <CardDescription>Result of CSV conversion.</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
+          <CardContent className="flex-1 overflow-hidden p-0 border-b">
             <div ref={jsonContainerRef} className="h-full w-full" />
           </CardContent>
+          <CardFooter className="shrink-0 p-3 flex justify-end">
+            <Button
+              onClick={async () => {
+                const val = jsonEditorRef.current?.getValue();
+                if (!val) return;
+
+                await writeText(val);
+                toast({ title: "Copied output to clipboard.", duration: 2000 });
+              }}
+            >
+              Copy <Clipboard className="w-4 h-4 ml-3" />
+            </Button>
+          </CardFooter>
         </Card>
       </div>
-      {/* TODO: Enforce CSV */}
       <FileDrop
         onFileDrop={(p) => {
           setFilePath(p);
@@ -188,73 +197,9 @@ export function CsvToJsonRoute() {
             () => null,
           );
         }}
+        fileExtensions={["csv"]}
       />
     </React.Fragment>
-  );
-
-  return (
-    <PageContainer>
-      <div className="flex gap-x-3 h-full">
-        <div className="flex-1 grid grid-rows-[min-content_min-content_1fr] gap-y-2">
-          <Title>CSV to JSON</Title>
-          <div className="flex w-full gap-x-2">
-            <Button
-              onClick={async () => {
-                let filepath = await open();
-                if (!filepath) return;
-                filepath = Array.isArray(filepath) ? filepath[0] : filepath;
-
-                setFilepath(filepath);
-                await execute({ dataPath: filepath });
-              }}
-              className="flex-1"
-            >
-              Select CSV file
-            </Button>
-            {data && (
-              <Button
-                onClick={async () => {
-                  if (!filepath) return;
-
-                  await csvToJson({ dataPath: filepath, fields });
-                }}
-                className="flex-1"
-              >
-                to JSON
-              </Button>
-            )}
-          </div>
-          <ScrollArea className="h-full max-h-full">
-            {data?.slice(0).map((header) => (
-              <span key={header} className="flex items-center gap-x-1">
-                <Checkbox
-                  checked={fields.includes(header)}
-                  id={`field-${header}`}
-                  onCheckedChange={() => {
-                    setFields((oldFields) => {
-                      if (oldFields.includes(header)) {
-                        return oldFields.filter((f) => f !== header);
-                      }
-
-                      return [...oldFields, header];
-                    });
-                  }}
-                />
-                <label
-                  htmlFor={`field-${header}`}
-                  className="text-sm font-medium"
-                >
-                  {header}
-                </label>
-              </span>
-            ))}
-          </ScrollArea>
-        </div>
-        <div className="flex-1" ref={jsonContainerRef}>
-          EDITOR
-        </div>
-      </div>
-    </PageContainer>
   );
 }
 

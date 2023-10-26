@@ -3,9 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { FileDown } from "lucide-react";
 
-type FileDropProps = { onFileDrop: (filepath: string) => void };
+type FileDropProps = {
+  fileExtensions?: string[];
+  onFileDrop: (filepath: string) => void;
+};
 
-export function FileDrop({ onFileDrop }: FileDropProps) {
+export function FileDrop({ fileExtensions, onFileDrop }: FileDropProps) {
   const [isDrag, setIsDrag] = React.useState(false);
 
   React.useEffect(() => {
@@ -24,7 +27,13 @@ export function FileDrop({ onFileDrop }: FileDropProps) {
 
       u3 = await listen<string[]>("tauri://file-drop", (evt) => {
         const file = evt.payload[0];
-        if (file) onFileDrop?.(file);
+
+        if (file) {
+          const ext = file.split(".").pop()?.toLowerCase();
+          if (!fileExtensions || (ext && fileExtensions.includes(ext)))
+            onFileDrop?.(file);
+        }
+
         setIsDrag(false);
       });
     })();
