@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button.tsx";
 import { ReactSetState } from "@/types";
 import { Link } from "react-router-dom";
-import { Github, Home, Settings2 } from "lucide-react";
+import { Github, PackageOpen, Settings2 } from "lucide-react";
 import { TooltipButton } from "@/components/ui/tooltip-button.tsx";
 
 type RootLayoutHeaderProps = {
@@ -10,11 +10,11 @@ type RootLayoutHeaderProps = {
 
 export function RootLayoutHeader({ setIsOpen }: RootLayoutHeaderProps) {
   return (
-    <header className="flex justify-between items-center p-2 border-b">
+    <header className="flex justify-between items-center p-2">
       <div className="flex gap-x-1">
         <TooltipButton tooltip="Home" asChild>
           <Link to="/" className="block">
-            <Home className="w-4 h-4" />
+            <PackageOpen className="w-5 h-5" />
           </Link>
         </TooltipButton>
       </div>
