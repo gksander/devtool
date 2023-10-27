@@ -15,11 +15,13 @@ import { TooltipProvider } from "@/components/ui/tooltip.tsx";
 import { ToolRoute } from "@/routes/tool.route.tsx";
 import "./monaco-environment.ts";
 import { Toaster } from "@/components/ui/toaster.tsx";
+import { SettingsRoute } from "@/routes/settings.route.tsx";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<RootLayout />}>
       <Route path="/" element={<HomeRoute />} />
+      <Route path="/settings" element={<SettingsRoute />} />
       <Route path="/tools">
         <Route path=":toolId" element={<ToolRoute />} />
       </Route>

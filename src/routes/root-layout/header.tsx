@@ -31,7 +31,11 @@ export function RootLayoutHeader({ setIsOpen }: RootLayoutHeaderProps) {
           </Link>
         </TooltipButton>
         <TooltipButton tooltip="Project repo page" asChild>
-          <a href="https://github.com" target="_blank" rel="noreferrer">
+          <a
+            href="https://github.com/gksander/devtool"
+            target="_blank"
+            rel="noreferrer"
+          >
             <Github className="w-4 h-4" />
           </a>
         </TooltipButton>
