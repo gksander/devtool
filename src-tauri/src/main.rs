@@ -10,7 +10,8 @@ fn main() {
             hashing::hash_sha256,
             hashing::hash_sha384,
             hashing::hash_sha512,
-            parse_csv::csv_as_json,
+            parse_csv::preview_csv_to_json,
+            parse_csv::export_csv_to_json
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

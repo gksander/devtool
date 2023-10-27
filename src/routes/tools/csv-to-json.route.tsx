@@ -1,7 +1,5 @@
-import * as React from "react";
-import * as monaco from "monaco-editor";
-import { open } from "@tauri-apps/api/dialog";
-import { useInvokedQuery } from "@/util/useInvokedQuery.ts";
+import { FileDrop } from "@/components/file-drop.tsx";
+import { RunButton } from "@/components/run-button.tsx";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,14 +9,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import { RunButton } from "@/components/run-button.tsx";
-import { create } from "zustand";
-import { FileDrop } from "@/components/file-drop.tsx";
 import { TooltipButton } from "@/components/ui/tooltip-button.tsx";
-import { Clipboard, File, FileUp, XSquare } from "lucide-react";
-import { clsx } from "clsx";
 import { useToast } from "@/components/ui/use-toast.ts";
+import { useInvokedQuery } from "@/util/useInvokedQuery.ts";
 import { writeText } from "@tauri-apps/api/clipboard";
+import { open, save } from "@tauri-apps/api/dialog";
+import { clsx } from "clsx";
+import { Clipboard, Download, File, FileUp, XSquare } from "lucide-react";
+import * as monaco from "monaco-editor";
+import * as React from "react";
+import { create } from "zustand";
 
 /**
  * TODO:
@@ -26,8 +26,11 @@ import { writeText } from "@tauri-apps/api/clipboard";
  */
 export function CsvToJsonRoute() {
   const { toast } = useToast();
-  const { execute: csvToJson, data: payload } =
-    useInvokedQuery<[string[], Record<string, string>]>("csv_as_json");
+  const { execute: previewCsvToJson, data: payload } = useInvokedQuery<
+    [string[], string]
+  >("preview_csv_to_json");
+  const { execute: exportCsvToJson } =
+    useInvokedQuery<string>("export_csv_to_json");
   const mode = useStore((state) => state.mode);
   const jsonContainerRef = React.useRef<HTMLDivElement>(null);
   const jsonEditorRef =
@@ -37,11 +40,11 @@ export function CsvToJsonRoute() {
     null,
   );
 
-  const filepath = useStore((state) => state.localFilePath);
+  const localFilePath = useStore((state) => state.localFilePath);
   const setFilePath = useStore((state) => state.setLocalFilePath);
   const clearFilePath = useStore((state) => state.clearLocalFilePath);
 
-  const json = payload?.[1] || [];
+  const json = payload?.[1] || "";
 
   // JSON Editor
   React.useEffect(() => {
@@ -68,7 +71,7 @@ export function CsvToJsonRoute() {
     const editor = jsonEditorRef.current;
     if (!editor || !json) return;
 
-    editor.setValue(JSON.stringify(json, null, 2));
+    editor.setValue(json);
   }, [json]);
 
   // CSV Editor
@@ -89,7 +92,7 @@ export function CsvToJsonRoute() {
       const value = editor?.getValue();
       if (!value) return;
 
-      csvToJson({ data: value, isFilePath: false, fields: [] })
+      previewCsvToJson({ data: value, isFilePath: false, fields: [] })
         .then((res) => {
           console.log(res);
         })
@@ -104,6 +107,57 @@ export function CsvToJsonRoute() {
       csvEditorRef.current = null;
     };
   }, [mode]);
+
+  const handleSaveFile = async () => {
+    const filepath = await save({
+      title: "Save JSON Output",
+      filters: [
+        {
+          name: "JSON",
+          extensions: ["json"],
+        },
+      ],
+    });
+    if (!filepath) return;
+
+    exportCsvToJson({
+      data:
+        mode === "text"
+          ? csvEditorRef.current?.getValue() || ""
+          : localFilePath,
+      isFilePath: mode === "file",
+      fields: [], // TODO: Fields
+      outputPath: filepath,
+      toClipboard: false,
+    }).then(() => {
+      toast({
+        title: "Saved JSON",
+        description: `Saved to ${filepath}`,
+        duration: 2000,
+      });
+    });
+  };
+
+  const handleCopyToClipboard = async () => {
+    const dat = await exportCsvToJson({
+      data:
+        mode === "text"
+          ? csvEditorRef.current?.getValue() || ""
+          : localFilePath,
+      isFilePath: mode === "file",
+      fields: [], // TODO: Fields
+      outputPath: "",
+      toClipboard: true,
+    });
+
+    await writeText(dat);
+
+    toast({
+      title: "Copied JSON",
+      description: `Copied to clipboard.`,
+      duration: 2000,
+    });
+  };
 
   return (
     <React.Fragment>
@@ -124,7 +178,9 @@ export function CsvToJsonRoute() {
             {mode === "file" ? (
               <div className="flex items-center gap-x-3 w-full">
                 <File className="w-6 h-6 text-gray-600" />
-                <span className="flex-1 text-sm text-gray-600">{filepath}</span>
+                <span className="flex-1 text-sm text-gray-600">
+                  {localFilePath}
+                </span>
                 <TooltipButton
                   tooltip="Clear local file"
                   // TODO: Need to actually clear json editor on this.
@@ -152,7 +208,7 @@ export function CsvToJsonRoute() {
                 filepath = Array.isArray(filepath) ? filepath[0] : filepath;
 
                 setFilePath(filepath);
-                csvToJson({
+                previewCsvToJson({
                   data: filepath,
                   isFilePath: true,
                   fields: [],
@@ -170,21 +226,20 @@ export function CsvToJsonRoute() {
         <Card className="flex-1 h-full flex flex-col overflow-hidden">
           <CardHeader>
             <CardTitle>JSON Output</CardTitle>
-            <CardDescription>Result of CSV conversion.</CardDescription>
+            <CardDescription>
+              Result of CSV conversion. Preview shown below, use copy/save
+              buttons for full output.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0 border-b">
             <div ref={jsonContainerRef} className="h-full w-full" />
           </CardContent>
-          <CardFooter className="shrink-0 p-3 flex justify-end">
-            <Button
-              onClick={async () => {
-                const val = jsonEditorRef.current?.getValue();
-                if (!val) return;
-
-                await writeText(val);
-                toast({ title: "Copied output to clipboard.", duration: 2000 });
-              }}
-            >
+          <CardFooter className="shrink-0 p-3 flex justify-end items-center gap-x-3">
+            <Button onClick={handleSaveFile}>
+              <Download className="w-4 h-4 mr-3" />
+              Save
+            </Button>
+            <Button onClick={handleCopyToClipboard}>
               Copy <Clipboard className="w-4 h-4 ml-3" />
             </Button>
           </CardFooter>
@@ -193,7 +248,7 @@ export function CsvToJsonRoute() {
       <FileDrop
         onFileDrop={(p) => {
           setFilePath(p);
-          csvToJson({ data: p, isFilePath: true, fields: [] }).catch(
+          previewCsvToJson({ data: p, isFilePath: true, fields: [] }).catch(
             () => null,
           );
         }}

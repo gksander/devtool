@@ -1,7 +1,7 @@
 import * as React from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 
-export const useInvokedQuery = <T>(fnName: string) => {
+export const useInvokedQuery = <T,>(fnName: string) => {
   const [data, setData] = React.useState<T | null>(null);
   const [status, setStatus] = React.useState(
     "idle" as "idle" | "loading" | "error" | "success",
@@ -14,7 +14,7 @@ export const useInvokedQuery = <T>(fnName: string) => {
         setData(res as T);
         setStatus("success");
 
-        return res;
+        return res as T;
       })
       .catch((err) => {
         setStatus("error");
