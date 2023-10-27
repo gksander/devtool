@@ -109,8 +109,7 @@ export function CsvToJsonRoute() {
 
     // TODO: Change selectedFields here? Enter a,b\n1,2 and select b, then change the b field to c. Things get weird.
     editor?.onDidChangeModelContent(() => {
-      const value = editor?.getValue();
-      if (!value) return;
+      const value = editor?.getValue() || "";
 
       previewCsvToJson({ data: value, isFilePath: false, fields: [] }).catch(
         () => null,
@@ -243,8 +242,11 @@ export function CsvToJsonRoute() {
             </TooltipButton>
             <div>
               <Popover>
-                <PopoverTrigger asChild>
-                  <Button>Fields</Button>
+                <PopoverTrigger asChild disabled={!fields?.length}>
+                  <Button>
+                    <CheckSquare className="w-4 h-4 mr-3" />
+                    Fields
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent
                   className="w-[200px] p-0"
@@ -252,7 +254,7 @@ export function CsvToJsonRoute() {
                   side="top"
                 >
                   <Command>
-                    <CommandInput placeholder="Field" />
+                    <CommandInput placeholder="Search fields..." />
                     <CommandList>
                       <CommandEmpty>No results found.</CommandEmpty>
                       <CommandGroup>
