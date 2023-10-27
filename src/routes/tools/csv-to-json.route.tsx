@@ -19,15 +19,7 @@ import {
 import { writeText } from "@tauri-apps/api/clipboard";
 import { open, save } from "@tauri-apps/api/dialog";
 import { clsx } from "clsx";
-import {
-  CheckSquare,
-  Clipboard,
-  Download,
-  File,
-  FileUp,
-  Square,
-  XSquare,
-} from "lucide-react";
+import { CheckSquare, Clipboard, Download, FileUp, Square } from "lucide-react";
 import * as monaco from "monaco-editor";
 import * as React from "react";
 import { create } from "zustand";
@@ -39,6 +31,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { SelectedFile } from "@/components/SelectedFile.tsx";
+import { enableSearchFromEditor } from "@/lib/editor-utils.ts";
 
 export function CsvToJsonRoute() {
   const { toast } = useToast();
@@ -78,8 +72,9 @@ export function CsvToJsonRoute() {
       minimap: { enabled: false },
       readOnly: true,
     });
-
     editor = jsonEditorRef.current;
+    enableSearchFromEditor(editor);
+
     return () => {
       editor?.dispose();
       jsonEditorRef.current = null;
@@ -106,6 +101,7 @@ export function CsvToJsonRoute() {
       minimap: { enabled: false },
     });
     editor = csvEditorRef.current;
+    enableSearchFromEditor(editor);
 
     // TODO: Change selectedFields here? Enter a,b\n1,2 and select b, then change the b field to c. Things get weird.
     editor?.onDidChangeModelContent(() => {
@@ -200,18 +196,7 @@ export function CsvToJsonRoute() {
             )}
           >
             {mode === "file" ? (
-              <div className="flex items-center gap-x-3 w-full">
-                <File className="w-6 h-6 text-gray-600" />
-                <span className="flex-1 text-sm text-gray-600">
-                  {localFilePath}
-                </span>
-                <TooltipButton
-                  tooltip="Clear local file"
-                  onClick={clearFilePath}
-                >
-                  <XSquare className="w-4 h-4" />
-                </TooltipButton>
-              </div>
+              <SelectedFile path={localFilePath} onClear={clearFilePath} />
             ) : (
               <div
                 className="h-full w-full overflow-hidden"

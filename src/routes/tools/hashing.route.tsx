@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as monaco from "monaco-editor";
-import { invoke } from "@tauri-apps/api/tauri";
-import { Clipboard, File, FileUp, XSquare } from "lucide-react";
+import { Clipboard, FileUp } from "lucide-react";
 import { Combobox, ComboBoxOption } from "@/components/ui/combobox.tsx";
 import {
   Card,
@@ -18,19 +17,21 @@ import { create } from "zustand";
 import { open } from "@tauri-apps/api/dialog";
 import { clsx } from "clsx";
 import { FileDrop } from "@/components/file-drop.tsx";
-import { RunButton } from "@/components/run-button.tsx";
+import { useInvokedQuery } from "@/util/useInvokedQuery.ts";
+import { SelectedFile } from "@/components/SelectedFile.tsx";
+import { enableSearchFromEditor } from "@/lib/editor-utils.ts";
 
 const options = [
   {
-    value: "hash_sha256",
+    value: "sha256",
     label: "SHA-256",
   },
   {
-    value: "hash_sha384",
+    value: "sha384",
     label: "SHA-384",
   },
   {
-    value: "hash_sha512",
+    value: "sha512",
     label: "SHA-512",
   },
 ] satisfies ComboBoxOption[];
@@ -38,20 +39,18 @@ const options = [
 /**
  * TODO:
  * - Empty state for output
- * - cmd + enter to run
- * - cmd + k should propagate to search.
  */
 export function HashingRoute() {
-  const [hashType, setHashType] = React.useState(options[0].value);
+  const { data: hashedOutput, execute } = useInvokedQuery<string>("hash");
   const editorContainerRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef("");
   const editorRef = React.useRef<monaco.editor.IStandaloneCodeEditor | null>();
   const mode = useHashStore((state) => state.mode);
-  const output = useHashStore((state) => state.output);
-  const setOutput = useHashStore((state) => state.setOutput);
   const filepath = useHashStore((state) => state.localFilePath);
   const setFilePath = useHashStore((state) => state.setLocalFilePath);
   const clearFilePath = useHashStore((state) => state.clearLocalFilePath);
+  const hashType = useHashStore((state) => state.hashType);
+  const setHashType = useHashStore((state) => state.setHashType);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -67,8 +66,18 @@ export function HashingRoute() {
       scrollBeyondLastLine: false,
     });
     editor = editorRef.current;
+    enableSearchFromEditor(editor);
+
+    // TODO: Throttle this?
     editor?.onDidChangeModelContent(() => {
-      contentRef.current = editor?.getValue() || "";
+      const value = editor?.getValue() || "";
+      contentRef.current = value;
+
+      execute({
+        data: value,
+        isFilePath: false,
+        hashType: useHashStore.getState().hashType,
+      }).catch(() => null);
     });
 
     return () => {
@@ -77,17 +86,16 @@ export function HashingRoute() {
     };
   }, [mode]);
 
-  const run = async () => {
-    setOutput(
-      await invoke(hashType, {
-        data: mode === "file" ? filepath : editorRef.current?.getValue() || "",
-        isFilePath: mode === "file",
-      }),
-    );
-  };
+  React.useEffect(() => {
+    execute({
+      data: mode === "file" ? filepath : contentRef.current,
+      isFilePath: mode === "file",
+      hashType,
+    }).catch(() => null);
+  }, [mode, filepath, hashType]);
 
   const copyOutput = async () => {
-    await writeText(output);
+    if (hashedOutput) await writeText(hashedOutput);
     toast({ title: "Copied output to clipboard.", duration: 3000 });
   };
 
@@ -115,16 +123,7 @@ export function HashingRoute() {
           >
             {/* TODO: dedup the file display between CSV */}
             {mode === "file" ? (
-              <div className="flex items-center gap-x-3 w-full">
-                <File className="w-6 h-6 text-gray-600" />
-                <span className="flex-1 text-sm text-gray-600">{filepath}</span>
-                <TooltipButton
-                  tooltip="Clear local file"
-                  onClick={clearFilePath}
-                >
-                  <XSquare className="w-4 h-4" />
-                </TooltipButton>
-              </div>
+              <SelectedFile path={filepath} onClear={clearFilePath} />
             ) : (
               <div
                 className="flex-1 overflow-hidden"
@@ -146,7 +145,6 @@ export function HashingRoute() {
                 onValueChange={setHashType}
                 placeholder="Algorithm..."
               />
-              <RunButton onClick={run} />
             </div>
           </CardFooter>
         </Card>
@@ -156,9 +154,9 @@ export function HashingRoute() {
             <CardDescription>Hashed output</CardDescription>
           </CardHeader>
           <CardContent className="bg-gray-50 flex-1 relative">
-            <p className="break-all font-mono">{output}</p>
+            <p className="break-all font-mono">{hashedOutput}</p>
             <div className="absolute bottom-3 right-3">
-              {output && (
+              {hashedOutput && (
                 <TooltipButton tooltip="Copy output" onClick={copyOutput}>
                   <Clipboard className="w-5 h-5" />
                 </TooltipButton>
@@ -179,6 +177,8 @@ type State = {
   localFilePath: string;
   setLocalFilePath: (val: string) => void;
   clearLocalFilePath: () => void;
+  hashType: string;
+  setHashType: (hashType: string) => void;
 };
 const useHashStore = create<State>((set) => ({
   mode: "text",
@@ -193,5 +193,10 @@ const useHashStore = create<State>((set) => ({
   },
   clearLocalFilePath() {
     set({ localFilePath: "", mode: "text" });
+  },
+
+  hashType: options[0].value,
+  setHashType(hashType) {
+    set({ hashType });
   },
 }));

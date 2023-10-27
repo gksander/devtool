@@ -7,9 +7,7 @@ mod parse_csv;
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            hashing::hash_sha256,
-            hashing::hash_sha384,
-            hashing::hash_sha512,
+            hashing::hash,
             parse_csv::preview_csv_to_json,
             parse_csv::export_csv_to_json
         ])
