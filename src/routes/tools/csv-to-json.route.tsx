@@ -1,5 +1,4 @@
 import { FileDrop } from "@/components/file-drop.tsx";
-import { RunButton } from "@/components/run-button.tsx";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,18 +11,35 @@ import {
 import { TooltipButton } from "@/components/ui/tooltip-button.tsx";
 import { useToast } from "@/components/ui/use-toast.ts";
 import { useInvokedQuery } from "@/util/useInvokedQuery.ts";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { writeText } from "@tauri-apps/api/clipboard";
 import { open, save } from "@tauri-apps/api/dialog";
 import { clsx } from "clsx";
-import { Clipboard, Download, File, FileUp, XSquare } from "lucide-react";
+import {
+  CheckSquare,
+  Clipboard,
+  Download,
+  File,
+  FileUp,
+  Square,
+  XSquare,
+} from "lucide-react";
 import * as monaco from "monaco-editor";
 import * as React from "react";
 import { create } from "zustand";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
-/**
- * TODO:
- * - Selecting fields to show
- */
 export function CsvToJsonRoute() {
   const { toast } = useToast();
   const { execute: previewCsvToJson, data: payload } = useInvokedQuery<
@@ -43,8 +59,11 @@ export function CsvToJsonRoute() {
   const localFilePath = useStore((state) => state.localFilePath);
   const setFilePath = useStore((state) => state.setLocalFilePath);
   const clearFilePath = useStore((state) => state.clearLocalFilePath);
+  const selectedFields = useStore((state) => state.selectedFields);
+  const toggleSelectedField = useStore((state) => state.toggleSelectedField);
 
   const json = payload?.[1] || "";
+  const fields = payload?.[0];
 
   // JSON Editor
   React.useEffect(() => {
@@ -88,25 +107,31 @@ export function CsvToJsonRoute() {
     });
     editor = csvEditorRef.current;
 
+    // TODO: Change selectedFields here? Enter a,b\n1,2 and select b, then change the b field to c. Things get weird.
     editor?.onDidChangeModelContent(() => {
       const value = editor?.getValue();
       if (!value) return;
 
-      previewCsvToJson({ data: value, isFilePath: false, fields: [] })
-        .then((res) => {
-          console.log(res);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+      previewCsvToJson({ data: value, isFilePath: false, fields: [] }).catch(
+        () => null,
+      );
     });
-    // TODO: Track changes
 
     return () => {
       editor?.dispose();
       csvEditorRef.current = null;
     };
   }, [mode]);
+
+  React.useEffect(() => {
+    const data =
+      mode === "text" ? csvEditorRef.current?.getValue() || "" : localFilePath;
+    previewCsvToJson({
+      data,
+      isFilePath: mode === "file",
+      fields: selectedFields,
+    }).catch(() => null);
+  }, [selectedFields, mode, localFilePath]);
 
   const handleSaveFile = async () => {
     const filepath = await save({
@@ -126,7 +151,7 @@ export function CsvToJsonRoute() {
           ? csvEditorRef.current?.getValue() || ""
           : localFilePath,
       isFilePath: mode === "file",
-      fields: [], // TODO: Fields
+      fields: selectedFields,
       outputPath: filepath,
       toClipboard: false,
     }).then(() => {
@@ -145,7 +170,7 @@ export function CsvToJsonRoute() {
           ? csvEditorRef.current?.getValue() || ""
           : localFilePath,
       isFilePath: mode === "file",
-      fields: [], // TODO: Fields
+      fields: selectedFields,
       outputPath: "",
       toClipboard: true,
     });
@@ -183,7 +208,6 @@ export function CsvToJsonRoute() {
                 </span>
                 <TooltipButton
                   tooltip="Clear local file"
-                  // TODO: Need to actually clear json editor on this.
                   onClick={clearFilePath}
                 >
                   <XSquare className="w-4 h-4" />
@@ -218,7 +242,43 @@ export function CsvToJsonRoute() {
               <FileUp className="w-4 h-4" />
             </TooltipButton>
             <div>
-              <RunButton title="Convert" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button>Fields</Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[200px] p-0"
+                  align="end"
+                  side="top"
+                >
+                  <Command>
+                    <CommandInput placeholder="Field" />
+                    <CommandList>
+                      <CommandEmpty>No results found.</CommandEmpty>
+                      <CommandGroup>
+                        {fields?.map((field) => {
+                          const isSelected = selectedFields.includes(field);
+
+                          return (
+                            <CommandItem
+                              key={field}
+                              onSelect={() => toggleSelectedField(field)}
+                              className="flex items-center"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                              <span className="ml-1">{field}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardFooter>
         </Card>
@@ -265,6 +325,8 @@ type State = {
   localFilePath: string;
   setLocalFilePath: (path: string) => void;
   clearLocalFilePath: () => void;
+  selectedFields: string[];
+  toggleSelectedField: (field: string) => void;
 };
 const useStore = create<State>((set) => ({
   mode: "text",
@@ -274,9 +336,17 @@ const useStore = create<State>((set) => ({
   },
   localFilePath: "",
   setLocalFilePath(path) {
-    set({ localFilePath: path, mode: "file" });
+    set({ localFilePath: path, mode: "file", selectedFields: [] });
   },
   clearLocalFilePath() {
-    set({ localFilePath: "", mode: "text", output: "" });
+    set({ localFilePath: "", mode: "text", output: "", selectedFields: [] });
+  },
+  selectedFields: [],
+  toggleSelectedField(field) {
+    set((state) => ({
+      selectedFields: state.selectedFields.includes(field)
+        ? state.selectedFields.filter((f) => f !== field)
+        : state.selectedFields.concat(field),
+    }));
   },
 }));
